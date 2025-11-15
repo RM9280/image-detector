@@ -8,6 +8,9 @@ import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
     
     @RestController
     public class GeminiController{
@@ -52,4 +55,38 @@ import java.nio.file.Paths;
             return "ERROR: " + e.getMessage(); 
         }
     }
+
+    @PostMapping("/api/analyze")
+    public String postMethodName(@RequestBody byte[] imageBytes) {
+
+        try {
+
+        System.out.println("Starting Gemini test with new SDK...");
+
+        Client client = Client.builder() 
+            .build();
+     
+        Content content = Content.fromParts(
+            // This is the correct method: Part.fromBytes(...)
+            Part.fromBytes(imageBytes, "image/webp"),
+            Part.fromText("What is in this image? Be concise.")
+        );
+
+        System.out.println("Sending request to Gemini... (This may take a moment)");
+
+        GenerateContentResponse response = client.models.generateContent(
+            "gemini-2.5-pro", 
+            content,
+            null 
+        );
+
+        String aiResponse = response.text();
+        return aiResponse;
+        }catch (Exception e) {
+            e.printStackTrace();
+            return "ERROR: " + e.getMessage();
+        }
+
+    }
+
 }
