@@ -6,6 +6,8 @@ import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.Client;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,15 +21,35 @@ import org.springframework.web.bind.annotation.RequestBody;
     public class GeminiController{
 
         public void speak(String text) {
-            try {
-                String command = "PowerShell -Command \"Add-Type -AssemblyName System.Speech; " +
-                        "$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
-                        "$speak.Speak('" + text + "');\"";
-                Runtime.getRuntime().exec(command);
-            } catch (Exception e) {
-                e.printStackTrace();
+        String escapedText= text.replace("'", "''");
+
+        String command= "PowerShell -Command \"Add-Type -AssemblyName System.Speech; " +
+                     "$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
+                     "$speak.Speak('" + escapedText + "');\"";
+
+        try{
+            Process process= Runtime.getRuntime().exec(command);
+
+            int exitCode= process.waitFor();
+
+            if (exitCode != 0) {
+            System.err.println("TTS Process Failed with Exit Code: " + exitCode);
             }
-        }
+
+            } catch (IOException e) {
+        System.err.println("Error executing speech command: " + e.getMessage());
+        e.printStackTrace();
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt(); 
+        e.printStackTrace();
+    }
+
+}
+    
+
+
+
+
 
         private static final String apiKey= "AIzaSyBSxyR1Mhxx4FYSUKJoGglQSOWLJxIchOs";
 
@@ -100,7 +122,6 @@ import org.springframework.web.bind.annotation.RequestBody;
         Client client = Client.builder().apiKey(apiKey).build();
      
         Content content = Content.fromParts(
-            // This is the correct method: Part.fromBytes(...)
             Part.fromBytes(imageBytes, "image/webp"),
             Part.fromText("What is in this image? Be concise.")
         );
@@ -115,7 +136,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 
         String aiResponse = response.text();
         System.out.println("Gemini Response: " + aiResponse);
-        Runtime.getRuntime().exec("say " + aiResponse);
+        speak(aiResponse);
+    
 
         return aiResponse;
         }catch (Exception e) {
